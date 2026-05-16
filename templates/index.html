@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Транскрибатор сессий</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #F0F4F8;
+      color: #1C2833;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      padding: 48px 40px 40px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1A237E;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #7F8C8D;
+      margin-bottom: 32px;
+    }
+
+    /* ── Drop zone ── */
+    #drop-zone {
+      border: 2px dashed #AEB6BF;
+      border-radius: 12px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+    #drop-zone.drag-over {
+      border-color: #1A237E;
+      background: #EEF2FF;
+    }
+    #drop-zone.has-file {
+      border-color: #27AE60;
+      background: #EAFAF1;
+    }
+    #file-input { display: none; }
+
+    .drop-icon { font-size: 40px; margin-bottom: 12px; }
+
+    .drop-label {
+      font-size: 15px;
+      color: #555;
+      margin-bottom: 8px;
+    }
+    .drop-hint {
+      font-size: 12px;
+      color: #AAA;
+    }
+    .file-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1E8449;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* ── Button ── */
+    #upload-btn {
+      margin-top: 24px;
+      width: 100%;
+      padding: 14px;
+      background: #1A237E;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    #upload-btn:hover:not(:disabled) { background: #283593; }
+    #upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Progress area ── */
+    #progress-area { display: none; margin-top: 28px; }
+
+    .steps {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .steps::before {
+      content: "";
+      position: absolute;
+      top: 14px;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: #E0E0E0;
+      z-index: 0;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 1;
+      flex: 1;
+    }
+    .step-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: #E0E0E0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #999;
+      transition: background 0.3s, color 0.3s;
+      margin-bottom: 6px;
+    }
+    .step.active .step-dot  { background: #1A237E; color: #fff; }
+    .step.done .step-dot    { background: #27AE60; color: #fff; }
+    .step-label {
+      font-size: 11px;
+      color: #999;
+      text-align: center;
+      max-width: 80px;
+    }
+    .step.active .step-label { color: #1A237E; font-weight: 600; }
+    .step.done  .step-label  { color: #27AE60; }
+
+    .status-msg {
+      font-size: 13px;
+      color: #555;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #CCC;
+      border-top-color: #1A237E;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Download button ── */
+    #download-btn {
+      display: none;
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      background: #27AE60;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      transition: background 0.2s;
+    }
+    #download-btn:hover { background: #229954; }
+
+    /* ── Error ── */
+    #error-box {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #FDEDEC;
+      border: 1px solid #F1948A;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #922B21;
+    }
+
+    .reset-link {
+      display: block;
+      margin-top: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #AAA;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .reset-link:hover { color: #555; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Транскрибатор сессий</h1>
+    <p class="subtitle">Загрузите аудиозапись — получите таблицу с репликами, говорящими и паузами</p>
+
+    <!-- Drop zone -->
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="drop-icon">🎙️</div>
+      <p class="drop-label">Перетащите файл сюда или нажмите для выбора</p>
+      <p class="drop-hint">MP3, MP4, M4A, WAV, FLAC, OGG — до 500 МБ</p>
+      <p class="file-name" id="file-name-display"></p>
+      <input type="file" id="file-input" accept=".mp3,.mp4,.m4a,.wav,.webm,.ogg,.flac,.aac" />
+    </div>
+
+    <button id="upload-btn" disabled>Начать транскрибацию</button>
+
+    <!-- Progress -->
+    <div id="progress-area">
+      <div class="steps">
+        <div class="step" id="step-1">
+          <div class="step-dot">1</div>
+          <div class="step-label">Загрузка файла</div>
+        </div>
+        <div class="step" id="step-2">
+          <div class="step-dot">2</div>
+          <div class="step-label">Транскрибация</div>
+        </div>
+        <div class="step" id="step-3">
+          <div class="step-dot">3</div>
+          <div class="step-label">Формирование таблицы</div>
+        </div>
+      </div>
+      <p class="status-msg" id="status-msg">
+        <span class="spinner"></span> Загружаю файл…
+      </p>
+    </div>
+
+    <!-- Error -->
+    <div id="error-box"></div>
+
+    <!-- Download -->
+    <a id="download-btn" href="#">⬇ Скачать таблицу (.xlsx)</a>
+
+    <span class="reset-link" id="reset-link" style="display:none" onclick="resetUI()">
+      Обработать другой файл
+    </span>
+  </div>
+
+  <script>
+    const dropZone   = document.getElementById('drop-zone');
+    const fileInput  = document.getElementById('file-input');
+    const uploadBtn  = document.getElementById('upload-btn');
+    const fileNameEl = document.getElementById('file-name-display');
+    const progressEl = document.getElementById('progress-area');
+    const statusMsg  = document.getElementById('status-msg');
+    const errorBox   = document.getElementById('error-box');
+    const downloadBtn= document.getElementById('download-btn');
+    const resetLink  = document.getElementById('reset-link');
+
+    let selectedFile = null;
+    let pollInterval = null;
+
+    // ── Drag & drop ──
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) setFile(f);
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    function setFile(f) {
+      selectedFile = f;
+      fileNameEl.textContent = `📄 ${f.name}`;
+      fileNameEl.style.display = 'block';
+      dropZone.classList.add('has-file');
+      uploadBtn.disabled = false;
+    }
+
+    // ── Upload ──
+    uploadBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      uploadBtn.disabled = true;
+      dropZone.style.pointerEvents = 'none';
+      progressEl.style.display = 'block';
+      errorBox.style.display = 'none';
+      setStep(1);
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      let jobId;
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки');
+        jobId = data.job_id;
+      } catch (err) {
+        showError(err.message);
+        return;
+      }
+
+      // Poll status
+      pollInterval = setInterval(() => pollStatus(jobId), 3000);
+    });
+
+    async function pollStatus(jobId) {
+      try {
+        const res = await fetch(`/status/${jobId}`);
+        const data = await res.json();
+
+        if (data.status === 'processing') {
+          setStep(data.step || 1);
+          setMessage(`<span class="spinner"></span> ${data.message}`);
+        } else if (data.status === 'done') {
+          clearInterval(pollInterval);
+          setStep(3, true);
+          setMessage('✅ ' + data.message);
+          downloadBtn.href = `/download/${jobId}`;
+          downloadBtn.style.display = 'block';
+          resetLink.style.display = 'block';
+        } else if (data.status === 'error') {
+          clearInterval(pollInterval);
+          showError(data.error || 'Неизвестная ошибка');
+        }
+      } catch (e) {
+        // network hiccup — keep polling
+      }
+    }
+
+    function setStep(active, allDone = false) {
+      for (let i = 1; i <= 3; i++) {
+        const el = document.getElementById(`step-${i}`);
+        el.classList.remove('active', 'done');
+        if (allDone || i < active) el.classList.add('done');
+        else if (i === active) el.classList.add('active');
+      }
+    }
+
+    function setMessage(html) {
+      statusMsg.innerHTML = html;
+    }
+
+    function showError(msg) {
+      uploadBtn.disabled = false;
+      dropZone.style.pointerEvents = 'auto';
+      errorBox.textContent = '⚠️ ' + msg;
+      errorBox.style.display = 'block';
+      resetLink.style.display = 'block';
+      setMessage('');
+    }
+
+    function resetUI() {
+      selectedFile = null;
+      fileInput.value = '';
+      fileNameEl.style.display = 'none';
+      dropZone.classList.remove('has-file');
+      dropZone.style.pointerEvents = 'auto';
+      uploadBtn.disabled = true;
+      progressEl.style.display = 'none';
+      errorBox.style.display = 'none';
+      downloadBtn.style.display = 'none';
+      resetLink.style.display = 'none';
+      setStep(0);
+      setMessage('');
+      clearInterval(pollInterval);
+    }
+  </script>
+</body>
+</html>

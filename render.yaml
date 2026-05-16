@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: coaching-transcriber
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ASSEMBLYAI_API_KEY
+        sync: false          # задаётся вручную в Render Dashboard
+      - key: PAUSE_THRESHOLD_SEC
+        value: "2.0"         # минимальная длина паузы в секундах
