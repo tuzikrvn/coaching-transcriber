@@ -62,7 +62,8 @@
     }
     #file-input { display: none; }
 
-    .drop-icon { font-size: 40px; margin-bottom: 12px; }
+    .drop-icon { margin-bottom: 12px; }
+    .drop-icon svg { width: 48px; height: 48px; color: #1A237E; }
 
     .drop-label {
       font-size: 15px;
@@ -216,7 +217,14 @@
 
     <!-- Drop zone -->
     <div id="drop-zone" onclick="document.getElementById('file-input').click()">
-      <div class="drop-icon">🎙️</div>
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 10a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+        </svg>
+      </div>
       <p class="drop-label">Перетащите файл сюда или нажмите для выбора</p>
       <p class="drop-hint">MP3, MP4, M4A, WAV, FLAC, OGG — до 500 МБ</p>
       <p class="file-name" id="file-name-display"></p>
